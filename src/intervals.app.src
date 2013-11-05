@@ -1,0 +1,11 @@
+{application, intervals,
+ [
+  {description, "Intervals library"},
+  {vsn, git},
+  {registered, []},
+  {applications, [
+                  kernel,
+                  stdlib
+                 ]},
+  {env, []}
+ ]}.
