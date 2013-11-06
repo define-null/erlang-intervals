@@ -31,7 +31,9 @@
 -module(intervals).
 -include("types.hrl").
 
--export([new/1, new/4, empty/0, all/0, from_elements/1,
+-export([new/1, new/4, empty/0, all/0,
+         from_proplist/3,
+         from_elements/1,
          %% testing / comparing intervals
          is_empty/1, is_all/1, is_subset/2, is_continuous/1,
          is_adjacent/2, in/2,
@@ -106,10 +108,28 @@ new(LeftBr, Begin, End, RightBr)
        ((End =:= infinity)   or (is_integer(End) and (End >= 0))) ->
     normalize_simple({interval, LeftBr, Begin, End, RightBr}).
 
-%% @doc Creates an interval from a list of elements.
+%% @doc Creates an interval from a list of points.
 -spec from_elements(Elements::[key()]) -> interval().
 from_elements(Elements) ->
     normalize_internal([{element, E} || E <- Elements, is_integer(E) and (E >= 0)]).
+
+%% @doc Creates and interval from a proplist. For every pair {A,B} default brackets
+%% are used.
+-spec from_proplist(LeftBr :: left_bracket(),
+                    RightBr :: right_bracket(),
+                    Proplist :: [{non_neg_integer(), non_neg_integer() | infinity}]) ->
+                           interval().
+from_proplist(LeftBr, RightBr, Proplist)
+  when ((LeftBr  =:= '(') or (LeftBr =:= '[')) and
+       ((RightBr =:= ')') or (RightBr =:= ']')) ->
+    normalize_internal([case Item of
+                            {A,B}
+                              when ((A =:= infinity) or (is_integer(A) and (A >= 0))) and
+                                   ((B =:= infinity) or (is_integer(B) and (B >= 0))) ->
+                                {interval, LeftBr, A, B, RightBr};
+                            A when is_integer(A) and (A >= 0) ->
+                                {element, A}
+                        end || Item <- Proplist]).
 
 %% @doc Checks whether the given interval is empty.
 -spec is_empty(interval()) -> boolean().
@@ -142,7 +162,8 @@ normalize_simple({interval, _LeftBr, A, B, _RightBr}) when (A < B) ->
     [{interval, _LeftBr, A, B, _RightBr}];
 normalize_simple({element, _A} = I)
   when is_integer(_A) -> [I];
-normalize_simple(all) -> [all].
+normalize_simple(all) ->
+    [all].
 
 -spec normalize_internal([simple_interval()]) -> interval().
 normalize_internal(List) ->
